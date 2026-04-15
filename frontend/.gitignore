@@ -11,6 +11,10 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+venv/
+__pycache__/
+*.db
+.env
 
 # IntelliJ related
 *.iml
