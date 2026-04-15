@@ -43,9 +43,10 @@ class Message(Base):
     id = Column(Integer, primary_key=True, index=True)
     chat_id = Column(Integer, ForeignKey("chats.id"))
     sender_id = Column(Integer, ForeignKey("users.id"))
-    content = Column(String)
-    file_path = Column(String, nullable=True) # Путь к файлу на жестком диске
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    text = Column(String)
+    # Исправлено на datetime.utcnow
+    created_at = Column(DateTime, default=datetime.utcnow) 
 
+    # Связи для удобного доступа
     chat = relationship("Chat", back_populates="messages")
     sender = relationship("User", back_populates="messages")
