@@ -9,10 +9,13 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    # Добавляем новую колонку для телефона
+    phone_number = Column(String, unique=True, index=True, nullable=True) 
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Связи (для удобного доступа к объектам через ORM)
     messages = relationship("Message", back_populates="sender")
+
+    
 
 
 class Chat(Base):

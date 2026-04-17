@@ -46,6 +46,31 @@ class ApiService {
     return token != null;
   }
 
+  //Регистрация пользователя
+ Future<bool> register(String username, String password, String phone) async {
+    final url = Uri.parse('$baseUrl/register');
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': username, 
+          'password': password,
+          'phone_number': phone
+        }),
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        await storage.write(key: 'jwt_token', value: data['access_token']);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  } 
+
   // --- НОВЫЕ МЕТОДЫ ДЛЯ ЧАТОВ ---
 
   // Вспомогательная функция для получения заголовков с токеном
@@ -71,8 +96,15 @@ class ApiService {
   }
 
   // Получить список всех пользователей (для поиска собеседника)
-  Future<List<dynamic>> getUsers() async {
-    final url = Uri.parse('$baseUrl/users');
+  // Получить список пользователей (теперь с поиском!)
+  Future<List<dynamic>> getUsers([String? searchQuery]) async {
+    // Если есть текст поиска, добавляем его в URL
+    String urlString = '$baseUrl/users';
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      urlString += '?search=$searchQuery';
+    }
+    
+    final url = Uri.parse(urlString);
     final headers = await _getHeaders();
     
     final response = await http.get(url, headers: headers);

@@ -5,6 +5,7 @@ from typing import Optional
 class UserCreate(BaseModel):
     username: str
     password: str
+    phone_number: Optional[str] = None # Телефон обязателен при регистрации, но не при логине
 
 # Схема для отправки данных обратно клиенту
 class UserResponse(BaseModel):
@@ -43,3 +44,4 @@ class ChatResponse(BaseModel):
 
     class Config:
         from_attributes = True
+        

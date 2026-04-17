@@ -35,33 +35,23 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Открываем панель со списком всех пользователей
-  void _showUsersBottomSheet() async {
-    final users = await _apiService.getUsers();
-    
-    if (!mounted) return;
+  // Открываем панель поиска пользователей
+  void _showUsersBottomSheet() {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true, // Важно! Чтобы шторка могла подняться над клавиатурой
       backgroundColor: bgColor,
       shape: Border(top: BorderSide(color: neonColor, width: 2)),
       builder: (context) {
-        return ListView.builder(
-          itemCount: users.length,
-          itemBuilder: (context, index) {
-            final user = users[index];
-            return ListTile(
-              title: Text(
-                user['username'],
-                style: TextStyle(fontFamily: 'PressStart2P', color: textColor, fontSize: 12),
-              ),
-              trailing: Icon(Icons.chat, color: neonColor),
-              onTap: () async {
-                Navigator.pop(context); // Закрываем шторку
-                await _apiService.createChat(user['id']); // Создаем чат на сервере
-                _loadChats(); // Обновляем список чатов
-              },
-            );
-          },
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom, // Сдвиг при открытии клавиатуры
+          ),
+          child: UserSearchSheet(
+            onChatCreated: () {
+              _loadChats(); // Обновляем список чатов на главном экране после создания
+            },
+          ),
         );
       },
     );
@@ -118,16 +108,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     title: Text(
-                      'ЧАТ #${chat['id']}', 
+                      // Если имя пришло с сервера - показываем его (заглавными буквами для стиля), 
+                      // если нет (вдруг баг) - оставляем старый формат
+                      chat['name'] != null ? chat['name'].toString().toUpperCase() : 'ЧАТ #${chat['id']}', 
                       style: TextStyle(fontFamily: 'PressStart2P', color: textColor, fontSize: 12),
                     ),
                     trailing: Icon(Icons.arrow_forward_ios, color: neonColor, size: 16),
                     onTap: () {
-                      // Переходим на экран переписки
+                      // Сначала формируем красивое имя так же, как для отображения в списке
+                      final String displayName = chat['name'] != null 
+                          ? chat['name'].toString().toUpperCase() 
+                          : 'ЧАТ #${chat['id']}';
+
+                      // Переходим на экран переписки и передаем оба параметра
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ChatScreen(chatId: chat['id']),
+                          builder: (context) => ChatScreen(
+                            chatId: chat['id'], 
+                            chatName: displayName, // Передаем имя!
+                          ),
                         ),
                       );
                     },
@@ -141,6 +141,107 @@ class _HomeScreenState extends State<HomeScreen> {
         shape: CircleBorder(side: BorderSide(color: neonColor, width: 2)),
         onPressed: _showUsersBottomSheet,
         child: Icon(Icons.add, color: neonColor),
+      ),
+    );
+  }
+}
+
+// --- НОВЫЙ ВИДЖЕТ ДЛЯ ШТОРКИ ПОИСКА ---
+class UserSearchSheet extends StatefulWidget {
+  final VoidCallback onChatCreated;
+
+  const UserSearchSheet({super.key, required this.onChatCreated});
+
+  @override
+  State<UserSearchSheet> createState() => _UserSearchSheetState();
+}
+
+class _UserSearchSheetState extends State<UserSearchSheet> {
+  final ApiService _apiService = ApiService();
+  final TextEditingController _searchController = TextEditingController();
+  
+  List<dynamic> _users = [];
+  bool _isLoading = false;
+
+  final Color neonColor = const Color(0xFF0FDCF7);
+  final Color textColor = const Color(0xFFFFFFFF);
+
+  @override
+  void initState() {
+    super.initState();
+    _searchUsers(''); // При открытии сразу грузим всех (чтобы было из кого выбирать)
+  }
+
+  // Функция реагирует на каждое изменение текста в поле
+  void _searchUsers(String query) async {
+    setState(() => _isLoading = true);
+    final users = await _apiService.getUsers(query);
+    if (mounted) {
+      setState(() {
+        _users = users;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.6, // Занимаем 60% высоты экрана
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // ПОЛЕ ВВОДА
+          TextField(
+            controller: _searchController,
+            style: TextStyle(fontFamily: 'PressStart2P', color: textColor, fontSize: 10),
+            cursorColor: neonColor,
+            onChanged: _searchUsers, // Ищем при каждом введенном символе!
+            decoration: InputDecoration(
+              hintText: 'ПОИСК ПО НИКУ...',
+              hintStyle: TextStyle(fontFamily: 'PressStart2P', color: textColor.withOpacity(0.5), fontSize: 10),
+              prefixIcon: Icon(Icons.search, color: neonColor),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: neonColor.withOpacity(0.5)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: neonColor, width: 2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // СПИСОК РЕЗУЛЬТАТОВ
+          Expanded(
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator(color: neonColor))
+                : _users.isEmpty
+                    ? Center(
+                        child: Text(
+                          'НЕ НАЙДЕНО', 
+                          style: TextStyle(fontFamily: 'PressStart2P', color: textColor.withOpacity(0.5), fontSize: 10)
+                        )
+                      )
+                    : ListView.builder(
+                        itemCount: _users.length,
+                        itemBuilder: (context, index) {
+                          final user = _users[index];
+                          return ListTile(
+                            title: Text(
+                              user['username'], 
+                              style: TextStyle(fontFamily: 'PressStart2P', color: textColor, fontSize: 12)
+                            ),
+                            trailing: Icon(Icons.chat, color: neonColor),
+                            onTap: () async {
+                              Navigator.pop(context); // Закрываем шторку
+                              await _apiService.createChat(user['id']);
+                              widget.onChatCreated(); // Даем команду обновить чаты
+                            },
+                          );
+                        },
+                      ),
+          ),
+        ],
       ),
     );
   }

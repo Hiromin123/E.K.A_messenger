@@ -16,7 +16,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
-
+from typing import Optional
 load_dotenv()
 
 # Создаем таблицы в БД
@@ -135,22 +135,75 @@ def login_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     
     # 4. Возвращаем токен клиенту
     return {"access_token": access_token, "token_type": "bearer"}
+@app.post("/register", response_model=schemas.Token)
+def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    # 1. Проверяем, не занят ли ник
+    db_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    
+    # 2. Сохраняем нового пользователя с телефоном
+    # В идеале здесь должен быть hashed_password = get_password_hash(user.password)
+    # Но если у тебя пока простые пароли:
+    new_user = models.User(
+        username=user.username, 
+        hashed_password=user.password, # Замени на хэш, если настроил bcrypt
+        phone_number=user.phone_number
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    # 3. Сразу авторизуем его и выдаем токен
+    access_token = create_access_token(data={"sub": new_user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
 
-# Получить список всех пользователей (чтобы было кому написать)
+# Получить список пользователей с возможностью поиска
 @app.get("/users", response_model=list[schemas.UserPublic])
-def get_users(skip: int = 0, limit: int = 100, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Возвращаем всех, кроме самого себя
-    users = db.query(models.User).filter(models.User.id != current_user.id).offset(skip).limit(limit).all()
+def get_users(search: Optional[str] = None, skip: int = 0, limit: int = 100, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Базовый запрос: ищем всех, кроме самого себя
+    query = db.query(models.User).filter(models.User.id != current_user.id)
+    
+    # Если пришел текст для поиска — фильтруем по никнейму
+    if search:
+        query = query.filter(models.User.username.ilike(f"%{search}%"))
+        
+    users = query.offset(skip).limit(limit).all()
     return users
 
 # Получить список чатов текущего пользователя
+# Получить список чатов текущего пользователя
 @app.get("/chats", response_model=list[schemas.ChatResponse])
 def get_my_chats(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Ищем все связи ChatMember, где есть наш user_id
+    # Находим все связи, где состоит текущий пользователь
     chat_members = db.query(models.ChatMember).filter(models.ChatMember.user_id == current_user.id).all()
-    # Вытаскиваем сами чаты из этих связей
-    chats = [member.chat for member in chat_members]
-    return chats
+    
+    result = []
+    for member in chat_members:
+        chat = member.chat
+        
+        # Копируем данные чата в словарь, чтобы безопасно их изменить для ответа
+        chat_info = {
+            "id": chat.id,
+            "is_group": chat.is_group,
+            "name": chat.name
+        }
+        
+        # Если чат личный, находим имя собеседника
+        if not chat.is_group:
+            # Ищем в этом же чате участника, ID которого НЕ равен нашему
+            other_member = db.query(models.ChatMember).filter(
+                models.ChatMember.chat_id == chat.id,
+                models.ChatMember.user_id != current_user.id
+            ).first()
+            
+            # Если собеседник найден, берем его username
+            if other_member:
+                chat_info["name"] = other_member.user.username
+                
+        result.append(chat_info)
+        
+    return result
 
 # Начать новый диалог
 # Начать новый диалог (с защитой от дубликатов)

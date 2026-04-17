@@ -5,8 +5,10 @@ import '../services/api_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final int chatId;
+  final String chatName; // Добавили переменную для имени
   
-  const ChatScreen({super.key, required this.chatId});
+  // Обязательно добавляем её в конструктор:
+  const ChatScreen({super.key, required this.chatId, required this.chatName}); 
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -74,9 +76,10 @@ class _ChatScreenState extends State<ChatScreen> {
         backgroundColor: bgColor,
         iconTheme: IconThemeData(color: neonColor),
         title: Text(
-          'ЧАТ #${widget.chatId}',
+          widget.chatName, // <-- ТЕПЕРЬ ТУТ ИМЯ
           style: TextStyle(fontFamily: 'PressStart2P', color: neonColor, fontSize: 14),
         ),
+        // ... остальной код AppBar
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1.0),
           child: Container(color: neonColor, height: 1.0),
