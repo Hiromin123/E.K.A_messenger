@@ -330,3 +330,4 @@ async def websocket_endpoint(websocket: WebSocket, chat_id: int, token: str):
         manager.disconnect(websocket, chat_id)
     finally:
         db.close() # Обязательно закрываем соединение с БД при выходе
+
