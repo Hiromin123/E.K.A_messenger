@@ -46,8 +46,3 @@ class MessengerApp extends StatelessWidget {
     );
   }
 }
-//ghghhhuui
-//hkjjhjh
-//sdfsdfsdf
-//ljhjhjhjhj
-//jkhjhjhjhujh
