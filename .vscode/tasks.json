@@ -2,9 +2,17 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Установка библиотек",
+      "label": "Настройка окружения и установка библиотек",
       "type": "shell",
-      "command": "${command:python.interpreterPath} -m pip install -r requirements.txt", 
+      "osx": {
+        "command": "python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt"
+      },
+      "linux": {
+        "command": "python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt"
+      },
+      "windows": {
+        "command": "python -m venv .venv && .\\.venv\\Scripts\\pip install -r backend\\requirements.txt"
+      },
       "runOptions": {
         "runOn": "folderOpen"
       },
