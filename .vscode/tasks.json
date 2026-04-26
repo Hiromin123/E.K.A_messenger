@@ -4,7 +4,7 @@
     {
       "label": "Установка библиотек",
       "type": "shell",
-      "command": "pip install -r requirements.txt", 
+      "command": "${command:python.interpreterPath} -m pip install -r requirements.txt", 
       "runOptions": {
         "runOn": "folderOpen"
       },
