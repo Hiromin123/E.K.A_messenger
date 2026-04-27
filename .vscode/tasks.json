@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Настройка окружения и установка библиотек",
+      "label": "Настройка Backend (Python)",
       "type": "shell",
       "osx": {
         "command": "python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt"
@@ -11,7 +11,28 @@
         "command": "python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt"
       },
       "windows": {
-        "command": "python -m venv .venv && .\\.venv\\Scripts\\pip install -r backend\\requirements.txt"
+        "command": "python -m venv .venv ; .\\.venv\\Scripts\\pip install -r backend\\requirements.txt"
+      },
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true
+      }
+    },
+    {
+      "label": "Настройка Frontend (Flutter)",
+      "type": "shell",
+      "osx": {
+        "command": "cd frontend && flutter pub get"
+      },
+      "linux": {
+        "command": "cd frontend && flutter pub get"
+      },
+      "windows": {
+        "command": "cd frontend ; flutter pub get"
       },
       "runOptions": {
         "runOn": "folderOpen"
